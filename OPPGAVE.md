@@ -153,7 +153,7 @@ INSERT INTO USER_GROUP (group_id, user_id) VALUES
 
 INSERT INTO CLASSROOM(classroom_id, code, classroom_name, ansvarlig_larer_id) VALUES
 ('CLASS1', 'DATA1100', 'Webutvikling', 'DDDDD'),
-('CLASS2', "DAPE1400", 'Javauntikling', 'YEMOA22');
+('CLASS2', 'DAPE1400', 'Javauntikling', 'YEMOA22');
 
 INSERT INTO ACCESS_KEY (group_id, classroom_id) VALUES
 ('ADATA-B', 'CLASS1'),
@@ -165,7 +165,7 @@ INSERT INTO ANNOUNCEMENT (announcement_id, user_id, classroom_id, title, innlegg
 
 INSERT INTO POST (post_id, user_id, classroom_id, parent_post_id, title, innlegg, dato) VALUES
 ('inn1', 'CCCCC', 'CLASS1', NULL, 'EXAMPLETITLEPOST', 'EXAMPLEINNLEGGPOST', CURRENT_TIMESTAMP),
-('inn2', 'DDDDD', 'CLASS1', 'inn2', 'EXAMPLETITLEPOST2', 'EXAMPLEINNLEGGPOST2', svar:***
+('inn2', 'DDDDD', 'CLASS2', 'inn2', 'EXAMPLETITLEPOST2', 'EXAMPLEINNLEGGPOST2', CURRENT_TIMESTAMP); svar:***
 CREATE TABLE USERS (
     user_id VARCHAR(15) PRIMARY KEY,
     username VARCHAR(25) NOT NULL UNIQUE,
@@ -246,11 +246,20 @@ INSERT INTO POST (post_id, user_id, classroom_id, parent_post_id, title, innlegg
 ### 1. Finn de 3 nyeste beskjeder fra læreren i et gitt klasserom (f.eks. klasserom_id = 1).
 
 *   **Relasjonsalgebra:**
-    > 
-
+    >   PROJECT announcement_id, title, innlegg, dato ( SELECT an.classroom_id = 1 AND an.user_id = c.ansvarlig_larer_id ( announcement AS an JOIN_{an.classroom_id = c.classroom_id} classroom AS c ) )
+    
 *   **SQL:**
     ```sql
-    
+    SELECT an.announcement_id,
+    an.title,
+    an.innlegg,
+    an.dato
+    FROM announcement an
+    JOIN classroom c ON an.classroom_id = c.classroom_id
+    WHERE an.user_id = '1'
+    AND an.user_id = c.ansvarlig_larer_id
+    ORDER BY an.dato DESC
+    LIMIT 3;
     ```
 
 ### 2. Vis en hel diskusjonstråd startet av en spesifikk student (f.eks. avsender_id = 2).
@@ -262,7 +271,35 @@ INSERT INTO POST (post_id, user_id, classroom_id, parent_post_id, title, innlegg
 
     Du kan vente med denne oppgaven til vi har gått gjennom avanserte SQL-spørringer (tips: må bruke en rekursiv konstruksjon `WITH RECURSIVE diskusjonstraad AS (..) SELECT FROM diskusjonstraad ...`)
     ```sql
-    
+    WITH RECURSIVE diskusjonstrad AS (
+    SELECT
+        p.post_id,
+        p.innlegg,
+        p.parent_post_id,
+        p.user_id,
+        p.post_id AS root_id,
+        0 AS depth
+    FROM
+        post p
+    WHERE
+        p.user_id = 'CCCCC'
+    AND
+        p.parent_post_id IS NULL
+    UNION ALL
+    SELECT
+        c.post_id,
+        c.innlegg,
+        c.parent_post_id,
+        c.user_od,
+        c.root_id,
+        d.depth + 1
+    FROM post c
+    JOIN diskusjonstrad d
+    ON c.parent_post_id = d.post_id
+    )
+    SELECT *
+    FROM diskusjonstrad
+    ORDER BY root_id, depth, post_id;
     ```
 
 ### 3. Finn alle studenter i en spesifikk gruppe (f.eks. gruppe_id = 1).
@@ -272,7 +309,10 @@ INSERT INTO POST (post_id, user_id, classroom_id, parent_post_id, title, innlegg
 
 *   **SQL:**
     ```sql
-    
+    SELECT u.user_id, u.username, u.name
+    FRIM user_group ug
+    JOIN users u ON u.user_id = ug.user_id
+    WHERE ug.group_id = 'ADATA-C';
     ```
 
 ### 4. Finn antall grupper.
@@ -282,7 +322,8 @@ INSERT INTO POST (post_id, user_id, classroom_id, parent_post_id, title, innlegg
 
 *   **SQL:**
     ```sql
-    
+    SELECT COUNT(*) AS antall_grupper
+    FROM groups;
     ```
 
 ## Del 5: Implementer i postgreSQL i din Docker container
